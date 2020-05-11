@@ -1,11 +1,8 @@
 package main
 
 import (
-	"database/sql"
 	"flag"
 	"fmt"
-	"github.com/oklog/oklog/pkg/group"
-	"google.golang.org/grpc"
 	"kkagitala/go-rest-api/middleware"
 	"kkagitala/go-rest-api/pkg/oc"
 	"kkagitala/go-rest-api/transport/pb"
@@ -15,18 +12,25 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/go-kit/kit/log"
-	"github.com/go-kit/kit/log/level"
-	kitoc "github.com/go-kit/kit/tracing/opencensus"
-	kitgrpc "github.com/go-kit/kit/transport/grpc"
-	kithttp "github.com/go-kit/kit/transport/http"
-	_ "github.com/lib/pq"
+	"github.com/jinzhu/gorm"
+	_ "github.com/jinzhu/gorm/dialects/mysql"
+
+	"github.com/oklog/oklog/pkg/group"
+	"google.golang.org/grpc"
+
 	ordersvc "kkagitala/go-rest-api/implementation"
 	"kkagitala/go-rest-api/repository"
 	"kkagitala/go-rest-api/service"
 	"kkagitala/go-rest-api/transport"
 	grpctransport "kkagitala/go-rest-api/transport/grpc"
 	httptransport "kkagitala/go-rest-api/transport/http"
+
+	"github.com/go-kit/kit/log"
+	"github.com/go-kit/kit/log/level"
+	kitoc "github.com/go-kit/kit/tracing/opencensus"
+	kitgrpc "github.com/go-kit/kit/transport/grpc"
+	kithttp "github.com/go-kit/kit/transport/http"
+	_ "github.com/lib/pq"
 )
 
 const (
@@ -53,18 +57,38 @@ func main() {
 
 	// Start the monitoring task
 	go middleware.NewMonitor(logger, 300)
-	var db *sql.DB
+
+	// Connecting to db
+	/*type product struct {
+		gorm.Model
+		Code string
+		Price uint
+	}
+
+	type Booking struct{
+		Id      int    `json:”id”`
+		User    string `json:”user”`
+		Members int  `json:”members”`
+	}*/
+
+	var db *gorm.DB
 	{
 		var err error
 		// Connect to the database
-		db, err = sql.Open("postgres",
-			"postgresql://root@localhost:26257/subscription?sslmode=disable")
-		db.SetMaxOpenConns(100)
+		db, err = gorm.Open("mysql", "root:kiaan@(localhost)/payments")
 		if err != nil {
 			level.Error(logger).Log("exit", err)
 			os.Exit(-1)
 		}
+		defer db.Close()
 	}
+	// Migrate the schema
+	//db.AutoMigrate(&product{})
+	//db.AutoMigrate(&Booking{})
+
+	// Create
+	//var booking = Booking{Id: 1, User: "kiaan", Members: 10}
+	//db.Create(&booking)
 
 	// Create Order Service
 	var svc service.Service
